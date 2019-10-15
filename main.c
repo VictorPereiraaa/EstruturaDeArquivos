@@ -141,6 +141,29 @@ void printarPalavras(Palavras * p) {
     printf("\n");
 }
 
+void checarVirgulasEPontosNasPalavras(Palavras * p) {
+
+    char  c;
+    int ultimoChar;
+
+    while(p != NULL) {
+
+        char * virgulaPosicao = strchr(p->palavra, ',');
+        char * pontoPosicao = strchr(p->palavra, '.');
+
+        if(virgulaPosicao != NULL) {
+            ultimoChar = strlen(p->palavra);
+            p->palavra[ultimoChar - 1] = '\0';
+        }
+
+        if(pontoPosicao != NULL) {
+            ultimoChar = strlen(p->palavra);
+            p->palavra[ultimoChar - 1] = '\0';
+        }
+        p = p->prox;
+    }
+}
+
 //Essa função vai ler as palavras
 //do Arquivo e salvar na lista
 int lerPalavrasDoArq(Palavras * p, FILE * arq) {
@@ -178,6 +201,7 @@ int main() {
     //listarPalavras();
     lerPalavrasDoArq(p, arqTxt);
     printarPalavras(p);
+    checarVirgulasEPontosNasPalavras(p);
     removerPalavrasDuplicadas(p);
     printarPalavras(p);
     printf("DEU BOM!!!\n");
