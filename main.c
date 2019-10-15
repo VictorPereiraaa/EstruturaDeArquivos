@@ -141,7 +141,7 @@ void printarPalavras(Palavras * p) {
     printf("\n");
 }
 
-void checarVirgulasEPontosNasPalavras(Palavras * p) {
+void removerVirgulasEPontosNasPalavras(Palavras * p) {
 
     char  c;
     int ultimoChar;
@@ -201,7 +201,7 @@ int main() {
     //listarPalavras();
     lerPalavrasDoArq(p, arqTxt);
     printarPalavras(p);
-    checarVirgulasEPontosNasPalavras(p);
+    removerVirgulasEPontosNasPalavras(p);
     removerPalavrasDuplicadas(p);
     printarPalavras(p);
     printf("DEU BOM!!!\n");
