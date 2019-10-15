@@ -6,14 +6,17 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 //Variaveis Globais
 int qtdPalavras = 0;
 
-struct Palavras {
+//Essa struct será  usada como
+//uma lista ligada de palavras
+typedef struct Palavras {
     char palavra[50];
-};
-
+    struct Palavras * prox;
+}Palavras;
 
 //Conta as palavras do arquivo
 //passado por parametro
@@ -26,7 +29,6 @@ void contaPalavras(FILE *  arq) {
 
         if (aux == ' ' ||  aux == '\n')
             qtdPalavras++;
-            
     }
 
     //utilizamos esse if para adicionar a ultima palavra
@@ -81,70 +83,103 @@ void cabecalho() {
 
 }
 
-void listarPalavras() {
+// Esta função remove as palavras
+// duplicadas que estão  na lista ligada
+void removerPalavrasDuplicadas(Palavras * p) {
+
+    Palavras * p1, *p2, *duplicada;
+    p1 = p;
+
+    //pegar elemento por elemento e
+    //compara com a arvore auxiliar
+    while(p1 != NULL && p1->prox != NULL) {
+        p2 = p1;
+
+        //comparar esses elementos com outros elementos
+        
+        while(p2->prox != NULL) {
+
+            //se tiver duplicado, deleta o nó
+            if(strcmp(p1->palavra, p2->prox->palavra) == 0) {
+                duplicada = p2->prox;
+                p2->prox = p2->prox->prox;
+                free(duplicada);
+            } else {
+                p2 = p2->prox;
+            }
+        }
+        p1 = p1->prox;
+    }
+
+    
+}
+
+//Essa função exclui a primeira palavra
+int excluiPalavra(Palavras ** p) {
+    char aux[5];
+    Palavras * proxPalavra = NULL;
+
+    if(p  == NULL) {
+        return -1;
+    }
+
+    proxPalavra = (*p)->prox;
+    strcpy(aux, (*p)->palavra);
+    free(*p);
+    *p = proxPalavra;
+    
+    return 0;
+}
+
+//Printar todas palavras da lista
+void printarPalavras(Palavras * p) {
+
+    while(p != NULL) {
+        printf("%s ", p->palavra);
+        p = p->prox;
+    }
+    printf("\n");
+}
+
+//Essa função vai ler as palavras
+//do Arquivo e salvar na lista
+int lerPalavrasDoArq(Palavras * p, FILE * arq) {
+    int j = 0;
+    char c[50];
+    
+    while(j < qtdPalavras) {
+        fscanf(arq, "%[^ ]", c);
+        fseek(arq, +1, SEEK_CUR);
+        p->prox = (Palavras *) malloc(sizeof(Palavras));
+        strcpy(p->palavra, c);
+        p = p->prox;
+        j++;
+        
+    }
+
+    return 0;
+}
+
+int main() {
+    Palavras * p = NULL;
+    p = (Palavras *) malloc(sizeof(Palavras));
+
     FILE * arqTxt;
     FILE * arqCmp;
-    char c[50];
-    int i = 0, j = 0;
-    struct Palavras p[100];
     
     //abre o txt para leitura e o cmp para escrita
     arqTxt = fopen("arquivotexto.txt", "r");
     arqCmp = fopen("arquivoCompactado.txt", "a+");
-    
+
     contaPalavras(arqTxt);
 
-
-    //joga todas as palavras na struct
-    while (j < qtdPalavras) {
-
-        //pega tudo ate achar um espaço
-        fscanf(arqTxt, "%[^ ]", c);
-        //pula uma posição na leitura
-        fseek(arqTxt, +1, SEEK_CUR);
-
-        strcpy(p[j].palavra, c);
-        j++;
-    }
-
-    j = 1;
     
-    //exclui as repetidas
-    //***funcionando parcialmente***///
-    
-    while (i != qtdPalavras) {
-        while (j != qtdPalavras) {
-            
-            if (strcmp(p[i].palavra, p[j].palavra) == 0) {
-                p[j] = p[j + 1];
-                j++;
-            } else {
-                j++;
-            }
-        }
-        i++;
-        j = 0;
-    }
-    
-    //excluir as repetidas
-
-    //atribuir o RRN
-
-    //printar no arqCmp
-
-
-    for (int k = 0; k < qtdPalavras; k++) {
-        printf("%d.%s ", k, p[k].palavra);
-    }
-
-
-    fclose(arqTxt);
-}
-
-int main() {
-
-    cabecalho();
-    listarPalavras();
+    //cabecalho();
+    //listarPalavras();
+    lerPalavrasDoArq(p, arqTxt);
+    printarPalavras(p);
+    removerPalavrasDuplicadas(p);
+    printarPalavras(p);
     printf("DEU BOM!!!\n");
 
     return 0;
