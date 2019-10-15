@@ -7,10 +7,41 @@
 #include <stdio.h>
 #include <string.h>
 
+//Variaveis Globais
+int qtdPalavras = 0;
+
 struct Palavras {
     char palavra[50];
 };
 
+
+//Conta as palavras do arquivo
+//passado por parametro
+void contaPalavras(FILE *  arq) {
+    
+    char aux;
+
+    while (!feof(arq)) {
+        aux = fgetc(arq);
+
+        if (aux == ' ' ||  aux == '\n')
+            qtdPalavras++;
+            
+    }
+
+    //utilizamos esse if para adicionar a ultima palavra
+    //ja que a mesma não está separada por um espaço,
+    //assim não estava contabilizando ao total de palavras
+    if (qtdPalavras > 0) {
+        qtdPalavras++;
+    }
+    //volta para o inicio do arquivo
+    rewind(arq);
+
+}
+
+//Faz o cabeçalho
+//
 void cabecalho() {
     FILE *arq;
     char byte1, byte2, character;
@@ -43,7 +74,7 @@ void cabecalho() {
     byte2 = contByte2 + 48;
 
     //escreve no arq compactado
-    arq = fopen("arquivoCompactado.txt.cmp", "w");
+    arq = fopen("arquivoCompactado.txt", "w");
     fprintf(arq, "%c%c", byte1, byte2);
 
     fclose(arq);
@@ -54,45 +85,36 @@ void listarPalavras() {
     FILE * arqTxt;
     FILE * arqCmp;
     char c[50];
-    char aux;
     int i = 0, j = 0;
     struct Palavras p[100];
-    int contPalavras = 0;
-    
     
     //abre o txt para leitura e o cmp para escrita
     arqTxt = fopen("arquivotexto.txt", "r");
-    arqCmp = fopen("arquivoCompactado.txt.cmp", "w");
-
-    //conta as palavras do arquivo txt
-    while (!feof(arqTxt)) {
-        aux = fgetc(arqTxt);
-        if (aux == ' ')
-            contPalavras++;
-        if (aux == '\n' || aux == '\0')
-            contPalavras++;
-    }
-    rewind(arqTxt);
+    arqCmp = fopen("arquivoCompactado.txt", "a+");
     
+    contaPalavras(arqTxt);
+
+
     //joga todas as palavras na struct
-    while (j < contPalavras) {
+    while (j < qtdPalavras) {
+
         //pega tudo ate achar um espaço
         fscanf(arqTxt, "%[^ ]", c);
         //pula uma posição na leitura
         fseek(arqTxt, +1, SEEK_CUR);
 
-        strcpy(p[i].palavra, c);
-        i++;
+        strcpy(p[j].palavra, c);
         j++;
     }
 
-    i = 0;
     j = 1;
     
     //exclui as repetidas
     //***funcionando parcialmente***///
-    while (i != contPalavras) {
-        while (j != contPalavras) {
+    
+    while (i != qtdPalavras) {
+        while (j != qtdPalavras) {
+            
             if (strcmp(p[i].palavra, p[j].palavra) == 0) {
                 p[j] = p[j + 1];
                 j++;
@@ -110,7 +132,8 @@ void listarPalavras() {
 
     //printar no arqCmp
 
-    for (int k = 0; k < contPalavras; k++) {
+
+    for (int k = 0; k < qtdPalavras; k++) {
         printf("%d.%s ", k, p[k].palavra);
     }
 
