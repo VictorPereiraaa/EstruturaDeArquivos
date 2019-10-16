@@ -141,6 +141,9 @@ void printarPalavras(Palavras * p) {
     printf("\n");
 }
 
+//Esta função serve para excluir pontos e virgulas
+//nas palavras, para depois conseguirmos verificar se
+//há palavras iguais.
 void removerVirgulasEPontosNasPalavras(Palavras * p) {
 
     char  c;
@@ -148,15 +151,25 @@ void removerVirgulasEPontosNasPalavras(Palavras * p) {
 
     while(p != NULL) {
 
+        //Encontra as palavras que possuem ou virgula ou ponto
+        //para poder excluir 
         char * virgulaPosicao = strchr(p->palavra, ',');
         char * pontoPosicao = strchr(p->palavra, '.');
 
+        //caso ele encontre uma virgula
+        //exclui a ultima letra da palavra
+        //sendo ou uma virgula ou um ponto,
+        //respectivamente
         if(virgulaPosicao != NULL) {
-            ultimoChar = strlen(p->palavra);
-            p->palavra[ultimoChar - 1] = '\0';
+
+            //contador de letras
+            ultimoChar = strlen(p->palavra); 
+            p->palavra[ultimoChar - 1] = '\0'; 
         }
 
         if(pontoPosicao != NULL) {
+
+            //contador de letras
             ultimoChar = strlen(p->palavra);
             p->palavra[ultimoChar - 1] = '\0';
         }
