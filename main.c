@@ -15,6 +15,8 @@ int qtdPalavras = 0;
 //uma lista ligada de palavras
 typedef struct Palavras {
     char palavra[50];
+    int posDezena;
+    int posUnidade;
     struct Palavras * prox;
 }Palavras;
 
@@ -22,13 +24,19 @@ typedef struct Palavras {
 //passado por parametro
 void contaPalavras(FILE *  arq) {
     
-    char aux;
-
-    while (!feof(arq)) {
-        aux = fgetc(arq);
-
-        if (aux == ' ' ||  aux == '\n')
-            qtdPalavras++;
+    char aux = 0;
+    int i = 0;
+    fseek(arq, 0, SEEK_END);
+    long tamanho = ftell(arq);
+    rewind(arq);
+    char* buffer = (char *) malloc(4096 * sizeof(char));
+    while (aux < tamanho) {
+        aux = fread(buffer, 1, 4096, arq);
+        printf("aux: %d", aux);
+        for (i = 0; i < aux; i++){
+            if (buffer[i] == ' ' || buffer[i] ==  '\n')
+                qtdPalavras++;
+        }
     }
 
     //utilizamos esse if para adicionar a ultima palavra
@@ -42,46 +50,27 @@ void contaPalavras(FILE *  arq) {
 
 }
 
-//Faz o cabeçalho
-//
-void cabecalho() {
-    FILE *arq;
-    char byte1, byte2, character;
-    int contByte1 = 0, contByte2 = 0;
+void criarCabecalho(Palavras  * p, FILE * arquivoCompactado) {
+    int contaDezena = 0, contaUnidade = 0;
+    char byteDezena, byteUnidade;
 
-    //conta o numero de palavras do arquivo
-    arq = fopen("arquivotexto.txt", "r");
-    while (!feof(arq)) {
-        character = fgetc(arq);
-        if (character == ' ') {
-            contByte2++;
-            if (contByte2 == 10) {
-                contByte1++;
-                contByte2 = 0;
-            }
+    while(p->prox != NULL) {
+
+        contaUnidade++;
+        if(contaUnidade == 10)  {
+            contaDezena++;
+            contaUnidade =  0;
         }
-    }
-    fclose(arq);
-
-    //soma a ultima palavra
-    if (contByte2 == 10) {
-        contByte1++;
-        contByte2 = 0;
-    } else {
-        contByte2++;
+        p = p->prox;
     }
 
-    //converte int para char
-    byte1 = contByte1 + 48;
-    byte2 = contByte2 + 48;
+    //Converte int para char
+    byteDezena  = contaDezena;
+    byteUnidade = contaUnidade;
 
     //escreve no arq compactado
-    arq = fopen("arquivoCompactado.txt", "w");
-    fprintf(arq, "%c%c", byte1, byte2);
-
-    fclose(arq);
-
-}
+    fprintf(arquivoCompactado, "%c%c ", byteDezena, byteUnidade);
+} 
 
 // Esta função remove as palavras
 // duplicadas que estão  na lista ligada
@@ -110,8 +99,6 @@ void removerPalavrasDuplicadas(Palavras * p) {
         }
         p1 = p1->prox;
     }
-
-    
 }
 
 //Essa função exclui a primeira palavra
@@ -139,6 +126,54 @@ void printarPalavras(Palavras * p) {
         p = p->prox;
     }
     printf("\n");
+}
+
+void escreverPalavrasNoArquivo(Palavras * p) {
+    FILE * arqCompactado;
+    arqCompactado = fopen("arquivoCompactado.txt", "a+");
+    int contaUnidade = 0, contaDezena = 0;
+    while(p->prox != NULL) {
+
+        //Somente vai escrever as palavras 
+        //com mais de 3 letras
+        if(strlen(p->palavra) > 3 ) {
+            fprintf(arqCompactado, "%s,", p->palavra);
+            p->posDezena = contaDezena;
+            p->posUnidade = contaUnidade;
+            printf("%s ", p->palavra);
+            printf("%d %d", p->posDezena, p->posUnidade);
+            contaUnidade++;
+            if(contaUnidade == 10)  {
+                contaDezena++;
+                contaUnidade =  0;
+            }
+        }
+        p =  p->prox;
+    }
+}
+
+void escreverOrdemDasPalavrasNoArquivo(Palavras * p) {
+    FILE * arqCompactado;
+    arqCompactado = fopen("arquivoCompactado.txt", "a+");
+    int contaDezena = 0, contaUnidade = 0;
+    char byteDezena, byteUnidade;
+
+    
+    while(p->prox != NULL) {
+
+        //Somente vai escrever as palavras 
+        //com mais de 3 letras
+        if(strlen(p->palavra) > 3 ) {
+            fprintf(arqCompactado, "%c%c", contaDezena+48, contaUnidade+48);
+            printf("%c%c ", contaDezena+48, contaUnidade+48);
+            contaUnidade++;
+            if(contaUnidade == 10)  {
+                contaDezena++;
+                contaUnidade =  0;
+            }
+        }
+        p =  p->prox;
+    }
 }
 
 //Esta função serve para excluir pontos e virgulas
@@ -181,17 +216,37 @@ void removerVirgulasEPontosNasPalavras(Palavras * p) {
 //do Arquivo e salvar na lista
 int lerPalavrasDoArq(Palavras * p, FILE * arq) {
     int j = 0;
-    char c[50];
-    
-    while(j < qtdPalavras) {
-        fscanf(arq, "%[^ ]", c);
-        fseek(arq, +1, SEEK_CUR);
-        p->prox = (Palavras *) malloc(sizeof(Palavras));
-        strcpy(p->palavra, c);
-        p = p->prox;
-        j++;
-        
+    char palavra[50];
+
+    char aux = 0;
+    int i = 0;
+    fseek(arq, 0, SEEK_END);
+    long tamanho = ftell(arq);
+    rewind(arq);
+    char* buffer = (char *) malloc(4096 * sizeof(char));
+    while (aux < tamanho) {
+        aux = fread(buffer, 1, 4096, arq);
+        for (i = 0; i < aux; i++){
+            if (buffer[i] == ' ' || buffer[i] ==  '\n'){
+                p->prox = (Palavras *) malloc(sizeof(Palavras));
+                strcpy(p->palavra, palavra);
+                strcpy(palavra, "");
+                p = p->prox;
+                j = 0;
+            } else {
+                palavra[j] = buffer[i];
+            }
+        }
     }
+    
+    // while(j < qtdPalavras) {
+    //     fscanf(arq, "%[^ ]", c);
+    //     fseek(arq, +1, SEEK_CUR);
+    //     p->prox = (Palavras *) malloc(sizeof(Palavras));
+    //     strcpy(p->palavra, c);
+    //     p = p->prox;
+    //     j++;
+    // }
 
     return 0;
 }
@@ -205,18 +260,21 @@ int main() {
     
     //abre o txt para leitura e o cmp para escrita
     arqTxt = fopen("arquivotexto.txt", "r");
-    arqCmp = fopen("arquivoCompactado.txt", "a+");
+    arqCmp = fopen("arquivoCompactado.txt", "w");
 
     contaPalavras(arqTxt);
 
     
-    //cabecalho();
-    //listarPalavras();
+    
+    // listarPalavras();
     lerPalavrasDoArq(p, arqTxt);
     printarPalavras(p);
     removerVirgulasEPontosNasPalavras(p);
     removerPalavrasDuplicadas(p);
     printarPalavras(p);
+    criarCabecalho(p, arqCmp);
+    escreverPalavrasNoArquivo(p);
+    escreverOrdemDasPalavrasNoArquivo(p);
     printf("DEU BOM!!!\n");
 
     return 0;
