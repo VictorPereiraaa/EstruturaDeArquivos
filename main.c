@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include <stdlib.h>
 
 //Variaveis Globais
@@ -13,87 +14,172 @@ int qtdPalavras = 0;
 
 //Essa struct será  usada como
 //uma lista ligada de palavras
-typedef struct Palavras {
+typedef struct Palavras
+{
     char palavra[50];
     int posDezena;
     int posUnidade;
-    struct Palavras * prox;
-}Palavras;
+    struct Palavras *prox;
+} Palavras;
+
+void limparPalavra(char *palavra, int tam)
+{
+    int i = 0;
+    for (; i < tam; i++)
+    {
+        palavra[i] = '\0';
+    }
+}
 
 //Conta as palavras do arquivo
 //passado por parametro
-void contaPalavras(FILE *  arq) {
-    
-    char aux = 0;
-    int i = 0;
-    fseek(arq, 0, SEEK_END);
-    long tamanho = ftell(arq);
-    rewind(arq);
-    char* buffer = (char *) malloc(4096 * sizeof(char));
-    while (aux < tamanho) {
-        aux = fread(buffer, 1, 4096, arq);
-        printf("aux: %d", aux);
-        for (i = 0; i < aux; i++){
-            if (buffer[i] == ' ' || buffer[i] ==  '\n')
-                qtdPalavras++;
-        }
-    }
-
-    //utilizamos esse if para adicionar a ultima palavra
-    //ja que a mesma não está separada por um espaço,
-    //assim não estava contabilizando ao total de palavras
-    if (qtdPalavras > 0) {
+void contaPalavras(Palavras *p)
+{
+    qtdPalavras = 0;
+    p = p->prox;
+    while (p != NULL)
+    {
         qtdPalavras++;
-    }
-    //volta para o inicio do arquivo
-    rewind(arq);
-
-}
-
-void criarCabecalho(Palavras  * p, FILE * arquivoCompactado) {
-    int contaDezena = 0, contaUnidade = 0;
-    char byteDezena, byteUnidade;
-
-    while(p->prox != NULL) {
-
-        contaUnidade++;
-        if(contaUnidade == 10)  {
-            contaDezena++;
-            contaUnidade =  0;
-        }
         p = p->prox;
     }
 
-    //Converte int para char
-    byteDezena  = contaDezena;
-    byteUnidade = contaUnidade;
+    printf("qtdPalavras: %d", qtdPalavras);
+}
 
-    //escreve no arq compactado
-    fprintf(arquivoCompactado, "%c%c ", byteDezena, byteUnidade);
-} 
+int getWordRRN(Palavras *p, char *palavra)
+{
+    int pos = -1;
+    int i = -1;
+
+    while (p != NULL)
+    {
+        if (strcmp(p->palavra, palavra) == 0)
+        {
+            pos = i;
+            break;
+        }
+        i++;
+        p = p->prox;
+    }
+
+    return pos >= 0 ? pos : -1;
+}
+
+int escreverRRNsNoArquivo(Palavras *p, FILE *arquivoCompactado, FILE *arq)
+{
+    int j = 0;
+    int i = 0;
+    int posPalavra;
+    int byteDezena = 0, byteUnidade = 0;
+
+    char palavra[50];
+    char aux = 0;
+
+    limparPalavra(palavra, strlen(palavra));
+
+    fseek(arq, 0, SEEK_END);
+    long tamanho = ftell(arq);
+    rewind(arq);
+    char *buffer = (char *)malloc(4096 * sizeof(char));
+    while (aux < tamanho)
+    {
+        aux = fread(buffer, 1, 4096, arq);
+        for (i = 0; i < aux; i++)
+        {
+            if (buffer[i] < 48 || (buffer[i] > 57 && buffer[i] < 65) || (buffer[i] > 90 && buffer[i] < 97) || buffer[i] == '\n')
+            {
+
+                if (j > 3)
+                {
+                    posPalavra = getWordRRN(p, palavra);
+
+                    if (posPalavra < 0)
+                    {
+                        printf("word not found...\n");
+                        return 1;
+                    }
+
+                    byteDezena = posPalavra / 10;
+                    byteUnidade = posPalavra % 10;
+
+                    fprintf(arquivoCompactado, "%c%c%c%c", 255, byteDezena, byteUnidade, buffer[i]);
+                }
+                else
+                {
+                    fprintf(arquivoCompactado, "%s%c", palavra, buffer[i]);
+                }
+
+                limparPalavra(palavra, strlen(palavra));
+                j = 0;
+            }
+            else
+            {
+                palavra[j] = buffer[i];
+                j++;
+            }
+        }
+    }
+
+    return 0;
+}
+
+void escreverPalavrasNoArquivo(Palavras *p, FILE *arqCompactado)
+{
+    p = p->prox;
+    while (p != NULL)
+    {
+
+        fprintf(arqCompactado, "%s,", p->palavra);
+        p = p->prox;
+    }
+}
+
+int criarCabecalho(Palavras *p, FILE *arquivoCompactado, FILE *arq)
+{
+    fprintf(arquivoCompactado, "%c%c", qtdPalavras / 10, qtdPalavras % 10);
+    escreverPalavrasNoArquivo(p, arquivoCompactado);
+    escreverRRNsNoArquivo(p, arquivoCompactado, arq);
+
+    // int contaDezena = 0, contaUnidade = 0;
+    // char byteDezena, byteUnidade;
+
+    // //Converte int para char
+    // byteDezena = contaDezena;
+    // byteUnidade = contaUnidade;
+
+    // //escreve no arq compactado
+
+    return 0;
+}
 
 // Esta função remove as palavras
 // duplicadas que estão  na lista ligada
-void removerPalavrasDuplicadas(Palavras * p) {
+void removerPalavrasDuplicadas(Palavras *p)
+{
 
-    Palavras * p1, *p2, *duplicada;
+    Palavras *p1, *p2, *duplicada;
     p1 = p;
 
     //pegar elemento por elemento e
     //compara com a arvore auxiliar
-    while(p1 != NULL && p1->prox != NULL) {
+    while (p1 != NULL && p1->prox != NULL)
+    {
         p2 = p1;
 
         //comparar esses elementos com outros elementos
-        
-        while(p2->prox != NULL) {
+
+        while (p2->prox != NULL)
+        {
 
             //se tiver duplicado, deleta o nó
-            if(strcmp(p1->palavra, p2->prox->palavra) == 0) {
+            if (strcmp(p1->palavra, p2->prox->palavra) == 0)
+            {
                 duplicada = p2->prox;
                 p2->prox = p2->prox->prox;
                 free(duplicada);
-            } else {
+            }
+            else
+            {
                 p2 = p2->prox;
             }
         }
@@ -102,11 +188,13 @@ void removerPalavrasDuplicadas(Palavras * p) {
 }
 
 //Essa função exclui a primeira palavra
-int excluiPalavra(Palavras ** p) {
+int excluiPalavra(Palavras **p)
+{
     char aux[5];
-    Palavras * proxPalavra = NULL;
+    Palavras *proxPalavra = NULL;
 
-    if(p  == NULL) {
+    if (p == NULL)
+    {
         return -1;
     }
 
@@ -114,95 +202,79 @@ int excluiPalavra(Palavras ** p) {
     strcpy(aux, (*p)->palavra);
     free(*p);
     *p = proxPalavra;
-    
+
     return 0;
 }
 
 //Printar todas palavras da lista
-void printarPalavras(Palavras * p) {
+void printarPalavras(Palavras *p)
+{
 
-    while(p != NULL) {
+    while (p != NULL)
+    {
         printf("%s ", p->palavra);
         p = p->prox;
     }
     printf("\n");
 }
 
-void escreverPalavrasNoArquivo(Palavras * p) {
-    FILE * arqCompactado;
-    arqCompactado = fopen("arquivoCompactado.txt", "a+");
-    int contaUnidade = 0, contaDezena = 0;
-    while(p->prox != NULL) {
-
-        //Somente vai escrever as palavras 
-        //com mais de 3 letras
-        if(strlen(p->palavra) > 3 ) {
-            fprintf(arqCompactado, "%s,", p->palavra);
-            p->posDezena = contaDezena;
-            p->posUnidade = contaUnidade;
-            printf("%s ", p->palavra);
-            printf("%d %d", p->posDezena, p->posUnidade);
-            contaUnidade++;
-            if(contaUnidade == 10)  {
-                contaDezena++;
-                contaUnidade =  0;
-            }
-        }
-        p =  p->prox;
-    }
-}
-
-void escreverOrdemDasPalavrasNoArquivo(Palavras * p) {
-    FILE * arqCompactado;
+void escreverOrdemDasPalavrasNoArquivo(Palavras *p)
+{
+    FILE *arqCompactado;
     arqCompactado = fopen("arquivoCompactado.txt", "a+");
     int contaDezena = 0, contaUnidade = 0;
     char byteDezena, byteUnidade;
 
-    
-    while(p->prox != NULL) {
+    while (p->prox != NULL)
+    {
 
-        //Somente vai escrever as palavras 
+        //Somente vai escrever as palavras
         //com mais de 3 letras
-        if(strlen(p->palavra) > 3 ) {
-            fprintf(arqCompactado, "%c%c", contaDezena+48, contaUnidade+48);
-            printf("%c%c ", contaDezena+48, contaUnidade+48);
+        if (strlen(p->palavra) > 3)
+        {
+            fprintf(arqCompactado, "%c%c", contaDezena + 48, contaUnidade + 48);
             contaUnidade++;
-            if(contaUnidade == 10)  {
+            if (contaUnidade == 10)
+            {
                 contaDezena++;
-                contaUnidade =  0;
+                contaUnidade = 0;
             }
         }
-        p =  p->prox;
+        p = p->prox;
     }
 }
 
 //Esta função serve para excluir pontos e virgulas
 //nas palavras, para depois conseguirmos verificar se
 //há palavras iguais.
-void removerVirgulasEPontosNasPalavras(Palavras * p) {
+void removerVirgulasEPontosNasPalavras(Palavras *p)
+{
 
-    char  c;
+    char c;
     int ultimoChar;
 
-    while(p != NULL) {
+    while (p != NULL)
+    {
 
         //Encontra as palavras que possuem ou virgula ou ponto
-        //para poder excluir 
-        char * virgulaPosicao = strchr(p->palavra, ',');
-        char * pontoPosicao = strchr(p->palavra, '.');
+        //para poder excluir
+        char *virgulaPosicao = strchr(p->palavra, ',');
+        char *pontoPosicao = strchr(p->palavra, '.');
 
         //caso ele encontre uma virgula
         //exclui a ultima letra da palavra
         //sendo ou uma virgula ou um ponto,
         //respectivamente
-        if(virgulaPosicao != NULL) {
+        if (virgulaPosicao != NULL)
+        {
 
             //contador de letras
-            ultimoChar = strlen(p->palavra); 
-            p->palavra[ultimoChar - 1] = '\0'; 
+            ultimoChar = strlen(p->palavra);
+            p->palavra[ultimoChar - 1] = '\0';
         }
 
-        if(pontoPosicao != NULL) {
+        if (pontoPosicao != NULL)
+        {
 
             //contador de letras
             ultimoChar = strlen(p->palavra);
@@ -214,68 +286,127 @@ void removerVirgulasEPontosNasPalavras(Palavras * p) {
 
 //Essa função vai ler as palavras
 //do Arquivo e salvar na lista
-int lerPalavrasDoArq(Palavras * p, FILE * arq) {
+int lerPalavrasDoArq(Palavras *p, FILE *arq)
+{
     int j = 0;
     char palavra[50];
 
+    limparPalavra(palavra, strlen(palavra));
     char aux = 0;
     int i = 0;
     fseek(arq, 0, SEEK_END);
     long tamanho = ftell(arq);
+
     rewind(arq);
-    char* buffer = (char *) malloc(4096 * sizeof(char));
-    while (aux < tamanho) {
+
+    char *buffer = (char *)malloc(4096 * sizeof(char));
+    while (aux < tamanho)
+    {
         aux = fread(buffer, 1, 4096, arq);
-        for (i = 0; i < aux; i++){
-            if (buffer[i] == ' ' || buffer[i] ==  '\n'){
-                p->prox = (Palavras *) malloc(sizeof(Palavras));
-                strcpy(p->palavra, palavra);
-                strcpy(palavra, "");
-                p = p->prox;
+        for (i = 0; i < aux; i++)
+        {
+            if (buffer[i] < 48 || (buffer[i] > 57 && buffer[i] < 65) || (buffer[i] > 90 && buffer[i] < 97) || buffer[i] == '\n')
+            {
+
+                if (strlen(palavra) > 3)
+                {
+                    if (p == NULL)
+                    {
+                        p = (Palavras *)malloc(sizeof(Palavras));
+                        strcpy(p->palavra, palavra);
+                    }
+                    else
+                    {
+                        p->prox = (Palavras *)malloc(sizeof(Palavras));
+                        strcpy(p->prox->palavra, palavra);
+                        p = p->prox;
+                    }
+                }
+
+                limparPalavra(palavra, strlen(palavra));
                 j = 0;
-            } else {
+            }
+            else
+            {
                 palavra[j] = buffer[i];
+                j++;
             }
         }
     }
-    
-    // while(j < qtdPalavras) {
-    //     fscanf(arq, "%[^ ]", c);
-    //     fseek(arq, +1, SEEK_CUR);
-    //     p->prox = (Palavras *) malloc(sizeof(Palavras));
-    //     strcpy(p->palavra, c);
-    //     p = p->prox;
-    //     j++;
-    // }
 
     return 0;
 }
 
-int main() {
-    Palavras * p = NULL;
-    p = (Palavras *) malloc(sizeof(Palavras));
+void comprimir(char *arqName)
+{
+    Palavras *p = NULL;
+    p = (Palavras *)malloc(sizeof(Palavras));
 
-    FILE * arqTxt;
-    FILE * arqCmp;
-    
+    char *compressFileName = arqName;
+
+    strcat(compressFileName, ".cmp");
+
+    FILE *arqTxt;
+    FILE *arqCmp;
+
     //abre o txt para leitura e o cmp para escrita
+
     arqTxt = fopen("arquivotexto.txt", "r");
     arqCmp = fopen("arquivoCompactado.txt", "w");
+    // arqTxt = fopen(arqName, "r");
+    // arqCmp = fopen(compressFileName, "w");
 
-    contaPalavras(arqTxt);
-
-    
-    
-    // listarPalavras();
     lerPalavrasDoArq(p, arqTxt);
-    printarPalavras(p);
-    removerVirgulasEPontosNasPalavras(p);
     removerPalavrasDuplicadas(p);
-    printarPalavras(p);
-    criarCabecalho(p, arqCmp);
-    escreverPalavrasNoArquivo(p);
-    escreverOrdemDasPalavrasNoArquivo(p);
-    printf("DEU BOM!!!\n");
+    contaPalavras(p);
+    printf("qtdPalavras: %d\n", qtdPalavras);
+    criarCabecalho(p, arqCmp, arqTxt);
+
+    printf("SUCESSO!\n");
+
+    fclose(arqCmp);
+    fclose(arqTxt);
+}
+
+char *getArqName(char *name)
+{
+    char *arqName;
+    int i;
+    for (i = 0; i < strlen(name); i++)
+    {
+        if (name[i] == '.')
+            break;
+
+        arqName[i] = name[i];
+    }
+
+    return arqName;
+}
+
+void descomprimir(char *arqCompressName)
+{
+    char *newArqName = getArqName(arqCompressName);
+    FILE *arqCmp = fopen(arqCompressName, "r");
+    FILE *arqTxt = fopen(newArqName, "r");
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc > 2)
+    {
+        if (strcmp(argv[1], "-c") == 0)
+        {
+            comprimir(argv[2]);
+        }
+        else if (strcmp(argv[1], "-d") == 0)
+        {
+            descomprimir(argv[2]);
+        }
+    }
+    else
+    {
+        printf("Numero de parametros insuficiente...\n");
+    }
 
     return 0;
 }
