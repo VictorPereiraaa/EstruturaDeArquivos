@@ -342,19 +342,15 @@ void comprimir(char *arqName)
     Palavras *p = NULL;
     p = (Palavras *)malloc(sizeof(Palavras));
 
-    char *compressFileName = arqName;
-
-    strcat(compressFileName, ".cmp");
-
     FILE *arqTxt;
     FILE *arqCmp;
 
-    //abre o txt para leitura e o cmp para escrita
+    // Arquivo txt
+    arqTxt = fopen(arqName, "r");
 
-    arqTxt = fopen("arquivotexto.txt", "r");
-    arqCmp = fopen("arquivoCompactado.txt", "w");
-    // arqTxt = fopen(arqName, "r");
-    // arqCmp = fopen(compressFileName, "w");
+    // Arquivo compress
+    char *compressFileName = strcat(arqName, ".cmp");
+    arqCmp = fopen(compressFileName, "w");
 
     lerPalavrasDoArq(p, arqTxt);
     removerPalavrasDuplicadas(p);
@@ -395,11 +391,11 @@ int main(int argc, char *argv[])
     if (argc > 2)
     {
         if (strcmp(argv[1], "-c") == 0)
-        {
+        {   
             comprimir(argv[2]);
         }
         else if (strcmp(argv[1], "-d") == 0)
-        {
+        {   
             descomprimir(argv[2]);
         }
     }
