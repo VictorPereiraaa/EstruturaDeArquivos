@@ -42,8 +42,6 @@ void contaPalavras(Palavras *p)
         qtdPalavras++;
         p = p->prox;
     }
-
-    printf("qtdPalavras: %d", qtdPalavras);
 }
 
 int getWordRRN(Palavras *p, char *palavra)
@@ -187,121 +185,24 @@ void removerPalavrasDuplicadas(Palavras *p)
     }
 }
 
-//Essa função exclui a primeira palavra
-int excluiPalavra(Palavras **p)
-{
-    char aux[5];
-    Palavras *proxPalavra = NULL;
-
-    if (p == NULL)
-    {
-        return -1;
-    }
-
-    proxPalavra = (*p)->prox;
-    strcpy(aux, (*p)->palavra);
-    free(*p);
-    *p = proxPalavra;
-
-    return 0;
-}
-
-//Printar todas palavras da lista
-void printarPalavras(Palavras *p)
-{
-
-    while (p != NULL)
-    {
-        printf("%s ", p->palavra);
-        p = p->prox;
-    }
-    printf("\n");
-}
-
-void escreverOrdemDasPalavrasNoArquivo(Palavras *p)
-{
-    FILE *arqCompactado;
-    arqCompactado = fopen("arquivoCompactado.txt", "a+");
-    int contaDezena = 0, contaUnidade = 0;
-    char byteDezena, byteUnidade;
-
-    while (p->prox != NULL)
-    {
-
-        //Somente vai escrever as palavras
-        //com mais de 3 letras
-        if (strlen(p->palavra) > 3)
-        {
-            fprintf(arqCompactado, "%c%c", contaDezena + 48, contaUnidade + 48);
-            contaUnidade++;
-            if (contaUnidade == 10)
-            {
-                contaDezena++;
-                contaUnidade = 0;
-            }
-        }
-        p = p->prox;
-    }
-}
-
-//Esta função serve para excluir pontos e virgulas
-//nas palavras, para depois conseguirmos verificar se
-//há palavras iguais.
-void removerVirgulasEPontosNasPalavras(Palavras *p)
-{
-
-    char c;
-    int ultimoChar;
-
-    while (p != NULL)
-    {
-
-        //Encontra as palavras que possuem ou virgula ou ponto
-        //para poder excluir
-        char *virgulaPosicao = strchr(p->palavra, ',');
-        char *pontoPosicao = strchr(p->palavra, '.');
-
-        //caso ele encontre uma virgula
-        //exclui a ultima letra da palavra
-        //sendo ou uma virgula ou um ponto,
-        //respectivamente
-        if (virgulaPosicao != NULL)
-        {
-
-            //contador de letras
-            ultimoChar = strlen(p->palavra);
-            p->palavra[ultimoChar - 1] = '\0';
-        }
-
-        if (pontoPosicao != NULL)
-        {
-
-            //contador de letras
-            ultimoChar = strlen(p->palavra);
-            p->palavra[ultimoChar - 1] = '\0';
-        }
-        p = p->prox;
-    }
-}
-
-//Essa função vai ler as palavras
-//do Arquivo e salvar na lista
 int lerPalavrasDoArq(Palavras *p, FILE *arq)
 {
     int j = 0;
     char palavra[50];
 
     limparPalavra(palavra, strlen(palavra));
-    char aux = 0;
+    long aux = 0;
+    long auxSoma = 0;
     int i = 0;
     fseek(arq, 0, SEEK_END);
     long tamanho = ftell(arq);
 
     rewind(arq);
 
-    char *buffer = (char *)malloc(4096 * sizeof(char));
-    while (aux < tamanho)
-    {
+    //char *buffer = (char *)malloc(4096 * sizeof(char));
+    while (auxSoma < tamanho)
+    {   
+        char *buffer = (char *)malloc(4096 * sizeof(char));
         aux = fread(buffer, 1, 4096, arq);
         for (i = 0; i < aux; i++)
         {
@@ -322,9 +223,9 @@ int lerPalavrasDoArq(Palavras *p, FILE *arq)
                         p = p->prox;
                     }
                 }
-
+                //printf("%li \n", aux);
                 limparPalavra(palavra, strlen(palavra));
-                j = 0;
+                j = 0;     
             }
             else
             {
@@ -332,6 +233,9 @@ int lerPalavrasDoArq(Palavras *p, FILE *arq)
                 j++;
             }
         }
+        free(buffer);
+        auxSoma += aux;
+        printf("%li\n", auxSoma);
     }
 
     return 0;
@@ -355,10 +259,7 @@ void comprimir(char *arqName)
     lerPalavrasDoArq(p, arqTxt);
     removerPalavrasDuplicadas(p);
     contaPalavras(p);
-    printf("qtdPalavras: %d\n", qtdPalavras);
     criarCabecalho(p, arqCmp, arqTxt);
-
-    printf("SUCESSO!\n");
 
     fclose(arqCmp);
     fclose(arqTxt);
@@ -366,24 +267,28 @@ void comprimir(char *arqName)
 
 char *getArqName(char *name)
 {
-    char *arqName;
-    int i;
-    for (i = 0; i < strlen(name); i++)
-    {
-        if (name[i] == '.')
-            break;
-
-        arqName[i] = name[i];
-    }
-
+    char *arqName = strtok(name, ".cmp");
     return arqName;
 }
 
 void descomprimir(char *arqCompressName)
 {
-    char *newArqName = getArqName(arqCompressName);
+
+    
+    // Compress name .txt.cmp
     FILE *arqCmp = fopen(arqCompressName, "r");
-    FILE *arqTxt = fopen(newArqName, "r");
+    //printf("\nArqCMP: %s\n\n", arqCompressName);
+
+    // Arq name .txt
+    char *newArqName = getArqName(arqCompressName);
+    strcat(newArqName, ".txt");
+    FILE *arqTxt = fopen(newArqName, "w");
+
+    //printf("ArqTXT: %s\n\n", newArqName);
+
+
+
+
 }
 
 int main(int argc, char *argv[])
